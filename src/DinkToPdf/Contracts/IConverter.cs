@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using DinkToPdf.EventDefinitions;
@@ -13,8 +14,8 @@ namespace DinkToPdf.Contracts
         ///  Converts document based on given settings
         /// </summary>
         /// <param name="document">Document to convert</param>
-        /// <returns>Returns converted document in bytes</returns>
-        byte[] Convert(IDocument document);
+        /// <returns>Returns converted document as a Stream</returns>
+        Stream Convert(IDocument document);
 
         event EventHandler<PhaseChangedArgs> PhaseChanged;
 

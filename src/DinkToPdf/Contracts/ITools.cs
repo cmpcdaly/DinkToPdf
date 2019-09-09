@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -51,7 +52,7 @@ namespace DinkToPdf.Contracts
 
         void DestroyConverter(IntPtr converter);
 
-        byte[] GetConversionResult(IntPtr converter);
+        Stream GetConversionResult(IntPtr converter);
 
         int SetPhaseChangedCallback(IntPtr converter, VoidCallback callback);
 

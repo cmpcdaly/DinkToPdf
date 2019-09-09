@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using DinkToPdf.Contracts;
 using System.IO;
+using Microsoft.IO;
 
 namespace DinkToPdf.TestWebServer.Controllers
 {
@@ -42,10 +43,10 @@ namespace DinkToPdf.TestWebServer.Controllers
                 }
             };
            
-            byte[] pdf = _converter.Convert(doc);
+            var pdf = _converter.Convert(doc) as RecyclableMemoryStream;
 
 
-            return new FileContentResult(pdf, "application/pdf");
+            return new FileContentResult(pdf.GetBuffer(), "application/pdf");
         }
     }
 }

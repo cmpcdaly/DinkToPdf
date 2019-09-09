@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.IO;
 using DinkToPdf;
+using Microsoft.IO;
 
 namespace DinkToPdf.ConsoleApp
 {
@@ -11,7 +12,7 @@ namespace DinkToPdf.ConsoleApp
     {
         public static void Main(string[] args)
         {
-            var converter = new BasicConverter(new PdfTools());
+            var converter = new BasicConverter(new PdfTools(new RecyclableMemoryStreamManager()));
 
             converter.PhaseChanged += Converter_PhaseChanged;
             converter.ProgressChanged += Converter_ProgressChanged;
@@ -19,7 +20,7 @@ namespace DinkToPdf.ConsoleApp
             converter.Warning += Converter_Warning;
             converter.Error += Converter_Error;
 
-            var doc = new HtmlToPdfDocument()
+            var doc = new HtmlToPdfDocument
             {
                 GlobalSettings = {
                     ColorMode = ColorMode.Color,
@@ -41,18 +42,17 @@ namespace DinkToPdf.ConsoleApp
                 }
             };
             
-            byte[] pdf = converter.Convert(doc);
-
             if (!Directory.Exists("Files"))
             {
                 Directory.CreateDirectory("Files");
             }
 
-            using (FileStream stream = new FileStream(@"Files\" + DateTime.UtcNow.Ticks.ToString() + ".pdf", FileMode.Create))
+            using (var stream = new FileStream(@"Files\" + DateTime.UtcNow.Ticks + ".pdf", FileMode.Create))
+            using (var pdfStream = converter.Convert(doc))
             {
-                stream.Write(pdf, 0, pdf.Length);
+                pdfStream.CopyTo(stream);
             }
-           
+
             Console.ReadKey();
         }
 

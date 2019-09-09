@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using DinkToPdf.Contracts;
+using Microsoft.IO;
 
 namespace DinkToPdf.TestWebServer
 {
@@ -38,7 +39,7 @@ namespace DinkToPdf.TestWebServer
         public void ConfigureServices(IServiceCollection services)
         {
             // Add converter to DI
-            services.AddSingleton(typeof(IConverter), new SynchronizedConverter(new PdfTools()));
+            services.AddSingleton(typeof(IConverter), new SynchronizedConverter(new PdfTools(new RecyclableMemoryStreamManager())));
             // Add framework services.
             services.AddApplicationInsightsTelemetry(Configuration);
 

@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using DinkToPdf.Contracts;
 using DinkToPdf.EventDefinitions;
 using System.Globalization;
+using System.IO;
+using Microsoft.IO;
 
 namespace DinkToPdf
 {
@@ -29,16 +31,15 @@ namespace DinkToPdf
             Tools = tools;
         }
 
-        public virtual byte[] Convert(IDocument document)
+        public virtual Stream Convert(IDocument document)
         {
-            if (document.GetObjects().Count() == 0)
+            if (!document.GetObjects().Any())
             {
                 throw new ArgumentException("No objects is defined in document that was passed. At least one object must be defined.");
             }
 
             ProcessingDocument = document;
-            
-            byte[] result = new byte[0];
+
             Tools.Load();
 
             IntPtr converter = CreateConverter(document);
@@ -50,16 +51,20 @@ namespace DinkToPdf
             Tools.SetWarningCallback(converter, OnWarning);
             Tools.SetErrorCallback(converter, OnError);
 
-            bool converted = Tools.DoConversion(converter);
-
-            if (converted)
+            try
             {
-                result = Tools.GetConversionResult(converter);
+                if (Tools.DoConversion(converter))
+                {
+                    return Tools.GetConversionResult(converter);
+                }
+
+                return null;
+            }
+            finally
+            {
+                Tools.DestroyConverter(converter);
             }
 
-            Tools.DestroyConverter(converter);
-
-            return result;
         }
 
         private void OnPhaseChanged(IntPtr converter)

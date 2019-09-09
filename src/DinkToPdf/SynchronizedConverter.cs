@@ -2,6 +2,7 @@
 using System;
 using System.Threading;
 using System.Collections.Concurrent;
+using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
 
@@ -22,7 +23,7 @@ namespace DinkToPdf
 
         }
 
-        public override byte[] Convert(IDocument document)
+        public override Stream Convert(IDocument document)
         {
             return Invoke(() => base.Convert(document));
         }

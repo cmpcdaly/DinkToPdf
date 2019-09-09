@@ -1,9 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Microsoft.IO;
+using System;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
-using DinkToPdf;
 
 namespace DinkToPdf.TestThreadSafe
 {
@@ -13,8 +11,8 @@ namespace DinkToPdf.TestThreadSafe
 
         public static void Main(string[] args)
         {
-            converter = new SynchronizedConverter(new PdfTools());
-            
+            converter = new SynchronizedConverter(new PdfTools(new RecyclableMemoryStreamManager()));
+
             var doc = new HtmlToPdfDocument()
             {
                 GlobalSettings = {
@@ -31,7 +29,7 @@ namespace DinkToPdf.TestThreadSafe
             };
 
             Task.Run(() => Action(doc));
-            
+
             var doc2 = new HtmlToPdfDocument()
             {
                 GlobalSettings = {
@@ -54,16 +52,15 @@ namespace DinkToPdf.TestThreadSafe
 
         private static void Action(HtmlToPdfDocument doc)
         {
-            byte[] pdf = converter.Convert(doc);
-
             if (!Directory.Exists("Files"))
             {
                 Directory.CreateDirectory("Files");
             }
 
-            using (FileStream stream = new FileStream(@"Files\" + DateTime.UtcNow.Ticks.ToString() + ".pdf", FileMode.Create))
+            using (var stream = new FileStream(@"Files\" + DateTime.UtcNow.Ticks + ".pdf", FileMode.Create))
+            using (var pdfStream = converter.Convert(doc))
             {
-                stream.Write(pdf, 0, pdf.Length);
+                pdfStream.CopyTo(stream);
             }
         }
     }

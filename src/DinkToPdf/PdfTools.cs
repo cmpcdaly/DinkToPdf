@@ -1,10 +1,13 @@
 ﻿using DinkToPdf.Contracts;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Text;
+using Microsoft.IO;
 
 namespace DinkToPdf
 {
@@ -12,8 +15,11 @@ namespace DinkToPdf
     {
         public bool IsLoaded { get; private set; }
 
-        public PdfTools()
+        private readonly RecyclableMemoryStreamManager _streamManager;
+
+        public PdfTools(RecyclableMemoryStreamManager streamManager)
         {
+            _streamManager = streamManager;
             IsLoaded = false;
         }
         
@@ -121,15 +127,43 @@ namespace DinkToPdf
              WkHtmlToXBindings.wkhtmltopdf_destroy_converter(converter);
         }
 
-        public byte[] GetConversionResult(IntPtr converter)
+        private const int BufferSize = 80000;
+
+        private static readonly ArrayPool<byte> Pool = ArrayPool<byte>.Shared;
+
+        public Stream GetConversionResult(IntPtr converter)
         {
-            IntPtr resultPointer;
+            // 1. Get the length and size of the output
+            var length = WkHtmlToXBindings.wkhtmltopdf_get_output(converter, out var resultPointer);
 
-            int length = WkHtmlToXBindings.wkhtmltopdf_get_output(converter, out resultPointer);
-            var result = new byte[length];
-            Marshal.Copy(resultPointer, result, 0, length);
+            // 2. Create a memory stream for the output
+            var stream = _streamManager.GetStream();
 
-            return result;
+            // 3. Take buffered chunks of the unmanaged array into memory, and write them to the recyclable stream
+            var offset = 0;
+
+            while (offset <= length)
+            {
+                // 3.1 Determine the amount of bytes we have to read (max BufferSize), and rent a buffer from the array pool
+                var remainingBytes = (length - offset);
+                var bufferSize = remainingBytes < BufferSize ? remainingBytes : BufferSize;
+                var buffer = Pool.Rent(BufferSize);
+
+                // 3.2 Copy a chunk of the unmanaged result to the buffer
+                Marshal.Copy(resultPointer, buffer, offset, bufferSize);
+
+                // 3.3 Write the buffer to the stream
+                stream.Write(buffer, 0, bufferSize);
+
+                // 3.4 Return the buffer to the ArrayPool
+                Pool.Return(buffer);
+
+                // 3.5 Increment the buffer
+                offset += BufferSize;
+            }
+
+            // 4. Return the stream
+            return stream;
         }
 
         public int SetPhaseChangedCallback(IntPtr converter, VoidCallback callback)
